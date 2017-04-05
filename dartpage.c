@@ -240,12 +240,70 @@ int ParseByHtml(int fd, char **vptr)
   unsigned int dec = 0;
   int n, def = 1, end = 3, base = MAX_BUFFER, rc;
   int cur = 0, max = 0, del = 0;
+  int is_a_num = 0, is_a_txt = 0;
 
-//ptr = malloc(1);
-//memset(ptr, 0x00, 1);
-//max = 1;
-//printf("check point ...%s\n\n", (*vptr));
-//fflush(stdout);
+  n = def;
+  for(;;)
+  {
+    rc = read(fd, &c, n);
+    if(rc == 1)
+    {
+      if(cur >= max)
+      {
+        max += base;
+        (*vptr) = realloc((*vptr),max);
+        memset((*vptr)+cur,0x00,base);
+      }
+      *((*vptr)+(cur++)) = c;
+
+      if(c == 13 || c == 10)
+      {
+        if(is_a_txt == is_a_num && is_a_num > 0)
+        {
+          if(dec > 0)
+          {
+            printf("1\n[%c][%d]\n[%d]%s\n",c,c,dec,(*vptr));fflush(stdout);
+            break;
+          }
+          else if(dec == 0)
+          {
+            printf("2\n[%c][%d]\n[%d]%s\n",c,c,dec,(*vptr));fflush(stdout);
+            break;
+          }
+        }
+
+        is_a_num = 0;
+        is_a_txt = 0;
+        dec = 0;
+        continue;
+      }
+
+      is_a_txt += 1;
+
+      if((c >= '0' && c <= '9') ||
+        (c >= 'A' && c <='F') || (c >= 'a' && c <='f'))
+      {
+        is_a_num += 1;
+
+        dec <<= 4;
+        if(c >= '0' && c <= '9')
+        {
+          dec += c & 0x0F;
+        }
+        else if((c >= 'A' && c <='F') || (c >= 'a' && c <='f'))
+        {
+          if(c >= 'a' && c <='f') c &= 0xDF;
+          dec += (c & 0x07) + 9;
+        }
+        continue;
+      }
+
+      is_a_num = 0;
+      dec = 0;
+    }
+  }
+  printf("3\n[%c][%d]\n[%d]%s\n",c,c,dec,(*vptr));fflush(stdout);
+  exit(0);
 
   n = def;
   for (;;)
@@ -680,7 +738,7 @@ int main(int argc, char *argv[])
       sprintf(getmsg_buffer,
         "/include/paper_list.php?page=0&PY=%s&SEC=01&SD=%s&PD=P1",
         argv[1],argv[2]);
-      sprintf(store_buffer,"/home/pi/Project/log/mknewspaper_%s.html",
+      sprintf(store_buffer,"/home/oracle/Project/log/mknewspaper_%s.html",
         argv[2]);
       break;
     default:
@@ -690,7 +748,7 @@ int main(int argc, char *argv[])
 //        "/dsaf001/main.do?rcpNo=20161129000214");
         "/dsaf001/main.do?rcpNo=20170227000188");
       sprintf(store_buffer,
-        "/home/pi/Project/log/dartpage_%04d%02d%02d.html",
+        "/home/oracle/Project/log/dartpage_%04d%02d%02d.html",
         tinfo->tm_year+1900,tinfo->tm_mon+1,tinfo->tm_mday);
       break;
   }
