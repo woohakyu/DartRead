@@ -1,4 +1,3 @@
-// 2017.04.03
 #include <stdlib.h>
 #include <stdio.h>
 #include <netinet/in.h>
@@ -12,6 +11,8 @@
 #include <errno.h>
 
 #include <time.h>
+
+#include <libxml/xmlreader.h>
 
 #define TRUE 1
 #define FAULT 0
@@ -38,94 +39,118 @@
 * *************************/
 #define MKNEWS_HOST "dart.fss.or.kr"
 #define MKNEWS_GET "GET %s HTTP/1.1\r\nHost: dart.fss.or.kr\r\nAccept-Encoding: text/html, deflate\r\nAccept: text/html\r\nAccept-Language: ko-kr\r\n\r"
-
-struct _visit
+struct _dart_api
 {
-  char *hypertext;
-  int is_visit;
-  struct _visit *next;
+  char *crp_cls;
+  char *crp_nm;
+  char *crp_cd;
+  char *rpt_nm;
+  char *rcp_no;
+  char *flr_nm;
+  char *rcp_dt;
+  char *rmk;
 };
 
-int init_list(struct _visit **node)
+struct _list_dart_api
 {
-  (*node)=(struct _visit *)malloc(sizeof(struct _visit));
-  if((*node)==NULL)
+  char *crp_cls;
+  char *crp_nm;
+  char *crp_cd;
+  char *rpt_nm;
+  char *rcp_no;
+  char *flr_nm;
+  char *rcp_dt;
+  char *rmk;
+  struct _list_dart_api *next;
+};
+
+int setvalue(void **p, void *v, unsigned int l)
+{
+  void *prtn;
+
+  printf("check point ... setvalue.1[%s][%d]\n",v,l);
+  (*p) =(char *) malloc(l+1);
+  if((*p) == NULL )
   {
-    perror("struct _visit (*node) memory alloc error");
+    perror("func setvalue: memory alloc error");
+    free((*p));
+    return FAULT;
+  }
+  memset((*p), 0x00, l+1);
+  prtn = memcpy((*p), v, l);
+
+  printf("check point ... setvalue.2[%s][%s]\n",prtn,(*p));
+  if(prtn == NULL) return FAULT;
+  else return TRUE;
+}
+
+int init_list(struct _list_dart_api **node)
+{
+  (*node) = (struct _list_dart_api *) malloc(sizeof(struct _list_dart_api));
+  if((*node) == NULL)
+  {
+    perror("struct _list (*node) memory alloc error");
     free((*node));
     return FAULT;
   }
-  (*node)->is_visit=TRUE;
-  (*node)->next=NULL;
+  (*node)->next = NULL;
   return TRUE;
 }
 
-int insert_node(struct _visit **node, char *href_buffer, int href_size)
-{ 
-  struct _visit *pIdxCtl, *plist;
-  pIdxCtl=(*node);
-  
-  while(pIdxCtl->next!=NULL)
-  { 
-    if(strcmp(pIdxCtl->next->hypertext,href_buffer)==0) return FAULT;
-    pIdxCtl=pIdxCtl->next;
-  }
-  
-  plist=(struct _visit *)malloc(sizeof(struct _visit));
-  if(plist==NULL)
-  { 
-    perror("struct _visit plist memory alloc error");
-    free(plist);
-    return FAULT;
-  }
-  plist->hypertext=(char *)malloc(href_size+1);
-  if(plist->hypertext==NULL)
-  { 
-    perror("plist->hypertext memory alloc error");
-    free(plist->hypertext);
-    free(plist);
-    return FAULT;
-  }
-  memset(plist->hypertext,0x00,href_size+1);
-  if((memcpy(plist->hypertext,href_buffer,href_size))==NULL)
-  { 
-    perror("plist->hypertext memory copy error");
-    free(plist->hypertext);
-    free(plist);
-    return FAULT;
-  }
-  plist->is_visit=FAULT;
-  plist->next=NULL;
-  pIdxCtl->next=plist;
-  return TRUE;
-}
-
-void print_list(struct _visit *node)
-{ 
-  struct _visit *pIdxCtl;
-  pIdxCtl=node->next;
-  
-  while(pIdxCtl->next)
-  { 
-    printf("check point ... node\n\t[HyperText: %s]",pIdxCtl->hypertext);
-    printf("\n\t[WebPage Visited Flag: %d]\n",pIdxCtl->is_visit);
-    pIdxCtl=pIdxCtl->next;
-  }
-  printf("check point ... node\n\t[HyperText: %s]",pIdxCtl->hypertext);
-  printf("\n\t[WebPage Visited Flag: %d]\n",pIdxCtl->is_visit);
-}
-
-void delete_all_list(struct _visit *node)
+int insert_node(struct _list_dart_api **node, struct _dart_api *ptr)
 {
-  struct _visit *pIdxCtl, *ptrDel;
-  pIdxCtl=node->next;
-  while(pIdxCtl)
-  { 
-    ptrDel=pIdxCtl;
-    pIdxCtl=pIdxCtl->next;
-    free(ptrDel->hypertext);
-    free(ptrDel);
+  struct _list_dart_api *pIdxCtl, *plist;
+  pIdxCtl = (*node);
+
+  //while((*node)->next != NULL) {(*node) = (*node)->next;printf("check point ...insert_node.01 while\n");}
+  while(pIdxCtl->next != NULL) {pIdxCtl = pIdxCtl->next;printf("check point ...insert_node.01 while\n");}
+
+  plist = (struct _list_dart_api *)malloc(sizeof(struct _list_dart_api));
+  if(plist == NULL)
+  {
+    perror("struct _list plist memory alloc error");
+    free(plist);
+    return FAULT;
   }
+
+  // after func point modify.
+  plist->crp_cls = malloc(strlen(ptr->crp_cls)+1);
+  memset(plist->crp_cls, 0x00, strlen(ptr->crp_cls)+1);
+  memcpy(plist->crp_cls, ptr->crp_cls, strlen(ptr->crp_cls));
+
+  plist->crp_nm = malloc(strlen(ptr->crp_nm)+1);
+  memset(plist->crp_nm, 0x00, strlen(ptr->crp_nm)+1);
+  memcpy(plist->crp_nm, ptr->crp_nm, strlen(ptr->crp_nm));
+
+  plist->crp_cd = malloc(strlen(ptr->crp_cd)+1);
+  memset(plist->crp_cd, 0x00, strlen(ptr->crp_cd)+1);
+  memcpy(plist->crp_cd, ptr->crp_cd, strlen(ptr->crp_cd));
+
+  plist->rpt_nm = malloc(strlen(ptr->rpt_nm)+1);
+  memset(plist->rpt_nm, 0x00, strlen(ptr->rpt_nm)+1);
+  memcpy(plist->rpt_nm, ptr->rpt_nm, strlen(ptr->rpt_nm));
+
+  plist->rcp_no = malloc(strlen(ptr->rcp_no)+1);
+  memset(plist->rcp_no, 0x00, strlen(ptr->rcp_no)+1);
+  memcpy(plist->rcp_no, ptr->rcp_no, strlen(ptr->rcp_no));
+
+  plist->flr_nm = malloc(strlen(ptr->flr_nm)+1);
+  memset(plist->flr_nm, 0x00, strlen(ptr->flr_nm)+1);
+  memcpy(plist->flr_nm, ptr->flr_nm, strlen(ptr->flr_nm));
+
+  plist->rcp_dt = malloc(strlen(ptr->rcp_dt)+1);
+  memset(plist->rcp_dt, 0x00, strlen(ptr->rcp_dt)+1);
+  memcpy(plist->rcp_dt, ptr->rcp_dt, strlen(ptr->rcp_dt));
+
+  plist->rmk = malloc(strlen(ptr->rmk)+1);
+  memset(plist->rmk, 0x00, strlen(ptr->rmk)+1);
+  memcpy(plist->rmk, ptr->rmk, strlen(ptr->rmk));
+
+  plist->next=NULL;
+  //(*node)->next=plist;
+  (pIdxCtl)->next=plist;
+
+  return TRUE;
 }
 
 void DeleteChar(char *str, char delchar)
@@ -175,6 +200,55 @@ void DeleteString(char *str, char *delstr)
     delcnt=0;
   }
   *(str+idx-delcntdur) = 0x00;
+}
+
+ssize_t readn(int fd, void *vptr, size_t n)
+{
+  size_t nleft;
+  size_t nread;
+  char *ptr;
+
+  ptr = vptr;
+  nleft = n;
+  while(nleft > 0)
+  {
+    if((nread = read(fd, ptr, nleft)) < 0)
+    {
+      if(errno == EINTR)
+        nread = 0; // and call read() again
+      else
+        return (-1);
+    }
+    else if(nread == 0)
+      break; // EOF
+    nleft -= nread;
+    ptr += nread;
+  }
+  return (n - nleft); // return >= 0
+}
+
+ssize_t readline(int fd, void *vptr, size_t maxlen)
+{
+  ssize_t n, rc;
+  char c, *ptr;
+
+  ptr = vptr;
+  for (n = 1; n < maxlen; n++) {
+    again:
+      if ( (rc = read(fd, &c, 1)) == 1) {
+        *ptr++ = c;
+        if ( c == 10 ) break;
+      } else if (rc == 0) {
+          *ptr = 0;
+          return (n - 1);
+      } else {
+          if (errno == EINTR)
+            goto again;
+          return (-1);
+      }
+    }
+  *ptr = 0;
+  return (n);
 }
 
 int connect_server(char *hostname, int hostport)
@@ -231,27 +305,44 @@ unsigned int parseHexToDecByHtml(const char *str)
   return val;
 }
 
+int SetValue(char **ps, char *pv, int *ns)
+{
+  int nv, nc, nb;
+
+  nc = (*ns);
+  nv = 0;
+  while(*(pv + nv)) nv += 1;
+  
+  if(nv >= (*ns))
+  {
+    (*ns) += nb;
+    (*ps) = realloc((*ps), (*ns));
+    memset((*ps) + nc, 0x00, nb);
+  }
+
+  if(memcpy((*ps),pv,nv)) return (*ns);
+  return 0;
+}
+
 /*
 * 알아서 가져와.
 */
-int ParseByHtml(int fd, char **vptr)
+int ParseByHtml(int fd, char **vptr, int *pmax)
 {
-  char hc, c, *ptr;
+  char c;
   unsigned int dec = 0;
-  int n, def = 1, end = 3, base = MAX_BUFFER, rc;
-  int cur = 0, max = 0, del = 0;
-  int is_a_num = 0, is_a_txt = 0;
+  int base, rc, cur = 0, is_a_num = 0, is_a_txt = 0;
 
-  n = def;
+  base = MAX_BUFFER;
   for(;;)
   {
-    rc = read(fd, &c, n);
+    rc = read(fd, &c, 1);
     if(rc == 1)
     {
-      if(cur >= max)
+      if(cur >= (*pmax))
       {
-        max += base;
-        (*vptr) = realloc((*vptr),max);
+        (*pmax) += base;
+        (*vptr) = realloc((*vptr),(*pmax));
         memset((*vptr)+cur,0x00,base);
       }
       *((*vptr)+(cur++)) = c;
@@ -260,14 +351,23 @@ int ParseByHtml(int fd, char **vptr)
       {
         if(is_a_txt == is_a_num && is_a_num > 0)
         {
+          rc = read(fd, &c, 1); // is read ascii '10';; dummy clear
           if(dec > 0)
           {
-            printf("1\n[%c][%d]\n[%d]%s\n",c,c,dec,(*vptr));fflush(stdout);
-            break;
+            base = dec;
+            if(cur+dec >= (*pmax))
+            {
+              (*pmax) += base;
+              (*vptr) = realloc((*vptr),(*pmax));
+              memset((*vptr)+cur,0x00,base);
+            }
+            rc = readn(fd, (*vptr)+cur-3-is_a_num, base);
+            base = MAX_BUFFER;
+            cur += (rc-3-is_a_num);
           }
           else if(dec == 0)
           {
-            printf("2\n[%c][%d]\n[%d]%s\n",c,c,dec,(*vptr));fflush(stdout);
+            memset((*vptr)+cur-3-is_a_num, 0x00, (*pmax)-(cur-3-is_a_num));
             break;
           }
         }
@@ -302,128 +402,8 @@ int ParseByHtml(int fd, char **vptr)
       dec = 0;
     }
   }
-  printf("3\n[%c][%d]\n[%d]%s\n",c,c,dec,(*vptr));fflush(stdout);
-  exit(0);
 
-  n = def;
-  for (;;)
-  {
-    rc = read(fd, &c, n);
-    if(rc == 1)
-    {
-printf("%c",c);
-fflush(stdout);
-      cur += 1;
-      if(cur >= max)
-      {
-        max += base;
-        (*vptr) = realloc((*vptr),max);
-        memset((*vptr)+cur,0x00,base);
-      }
-      *((*vptr)+cur-1) = c;
-
-      hc=c;
-      hc &= 0xDF;
-      if( (c >= '0' && c <= '9') || (hc >= 'A' && hc <='F') )
-      {
-        del += 1;
-        dec <<= 4;
-        if(c >= '0' && c <= '9')
-          dec += c & 0x0F;
-        else if(hc >= 'A' && hc <='F')
-          dec += (hc &0x07) + 9;
-        continue;
-      }
-
-//if((c == 13 && dec > 8000 && dec < 9000) || c == 13 && dec == 0)
-//{
-//printf("\ncheck point ...\n[2:%d:%c]\n[1:%d:%c]\n[0:%d:%c]",
-//  *((*vptr)-(del+2)+cur), *((*vptr)-(del+2)+cur),
-//  *((*vptr)-(del+1)+cur), *((*vptr)-(del+1)+cur),
-//  c, c);
-//fflush(stdout);
-//}
-      if(c == 13 && *((*vptr)-(del+2)+cur) == 10)
-      {
-//printf("\n\ncheck point ...%s\n\n",(*vptr));
-//fflush(stdout);
-        if(dec>0) n=dec;
-        else if(dec==0) n=end;
-        //(*vptr) -= del;
-        
-
-        if(cur+n >= max)
-        {
-printf("\n\ncheck point ... realloc[cur:%d][n:%d][%s]\n\n",
-cur, n, (*vptr));
-fflush(stdout);
-          max += (base+n);
-          (*vptr) = realloc((*vptr),max);
-          memset((*vptr)-(del+2)+cur,0x00,(base+n+2));
-        }
-        read(fd, (*vptr)-(del+2)+cur, n);
-        cur += (n);
-        n=def;
-      }
-      else
-      {
-        n=def;
-      }
-      del = 0;
-      dec = 0;
-    }
-    else if (rc == 0) break;
-  }
   return cur;
-}
-
-ssize_t readn(int fd, void *vptr, size_t n)
-{
-  size_t nleft;
-  size_t nread;
-  char *ptr;
-
-  ptr = vptr;
-  nleft = n;
-  while(nleft > 0)
-  {
-    if((nread = read(fd, ptr, nleft)) < 0)
-    {
-      if(errno == EINTR)
-        nread = 0; // and call read() again
-      else
-        return (-1);
-    }
-    else if(nread == 0)
-      break; // EOF
-    nleft -= nread;
-    ptr += nread;
-  }
-  return (n - nleft); // return >= 0
-}
-
-ssize_t readline(int fd, void *vptr, size_t maxlen)
-{
-  ssize_t n, rc;
-  char c, *ptr;
-
-  ptr = vptr;
-  for (n = 1; n < maxlen; n++) {
-    again:
-      if ( (rc = read(fd, &c, 1)) == 1) {
-        *ptr++ = c;
-        if ( c == 10 ) break;
-      } else if (rc == 0) {
-          *ptr = 0;
-          return (n - 1);
-      } else {
-          if (errno == EINTR)
-            goto again;
-          return (-1);
-      }
-    }
-  *ptr = 0;
-  return (n);
 }
 
 ssize_t readlinebyhtml(int fd, void *vptr, size_t maxlen)
@@ -451,146 +431,6 @@ ssize_t readlinebyhtml(int fd, void *vptr, size_t maxlen)
     }
   *ptr = 0;
   return (n);
-}
-
-int http_readwrite(char *hostname, int hostport, char **readmsg, int *readmsg_usesize, int *readmsg_maxsize, char *writemsg, int writemsg_usesize)
-{
-  int socket_fd;
-  ssize_t number_characters_read,number_characters_write;
-  char *store_buffer, *html_buffer;
-  int store_size, html_size;
-
-  if((socket_fd=connect_server(hostname, hostport))<=1) return 1;
-
-  // Retrieve the server's home page.
-  // Send the HTTP GET command for the home page.
-  number_characters_write=write(socket_fd, writemsg, writemsg_usesize);
-  if(number_characters_write<=0)
-  {
-    perror("socket_fd write error");
-    close(socket_fd);
-    return 1;
-  }
-
-  store_buffer=writemsg;
-  if(writemsg_usesize>=MAX_BUFFER) store_size=MAX_BUFFER;
-  else store_size=writemsg_usesize;
-
-  number_characters_read=ParseByHtml(socket_fd, &(*readmsg));
-  //printf("check point ...[%d]%s",number_characters_read,(*readmsg));
-  //fflush(stdout);
-  //exit(0);
-  return (0);
-
-  while(1)
-  {
-    memset(store_buffer,0x00,store_size);
-    number_characters_read=readline(socket_fd,store_buffer,store_size);
-printf("check point .H.[%d]%s",number_characters_read,store_buffer);
-fflush(stdout);
-    if(number_characters_read<=0)
-    {
-      close(socket_fd);
-      if(number_characters_read==-1)
-      {
-        perror("socket_fd read error");
-        return 1;
-      }
-      break; //end of socket
-    }
-    else if(number_characters_read>2 && number_characters_read<7)
-    {
-      html_size = parseHexToDecByHtml(store_buffer);
-      html_buffer = (char *)malloc(html_size);
-printf("check point 1N.[%d]\n",html_size);
-fflush(stdout);
-      memset(html_buffer,0x00,html_size);
-
-      memset(store_buffer,0x00,store_size);
-      read(socket_fd,store_buffer,2);
-printf("check point 2N.%s",store_buffer);
-fflush(stdout);
-      break;
-    }
-  }
-
-  while(1)
-  {
-    memset(html_buffer,0x00,html_size);
-    number_characters_read=readn(socket_fd,html_buffer,html_size);
-printf("check point .B.[%d]%s",number_characters_read,html_buffer);
-fflush(stdout);
-    if(number_characters_read<=0)
-    {
-      close(socket_fd);
-      if(number_characters_read==-1)
-      {
-        perror("socket_fd read error");
-        return 1;
-      }
-      break; //end of socket
-    }
-
-    if(((*readmsg_usesize)+number_characters_read)>=(*readmsg_maxsize))
-    {
-      (*readmsg_maxsize)+=html_size;
-      (*readmsg)=realloc((*readmsg),(*readmsg_maxsize));
-      if((*readmsg)==NULL)
-      {
-        perror("conf_file memory alloc error");
-        free((*readmsg));
-        close(socket_fd);
-        return 1;
-      }
-      memset((*readmsg)+(*readmsg_usesize),0x00,html_size);
-    }
-
-    memcpy((*readmsg)+(*readmsg_usesize),store_buffer,number_characters_read);
-    (*readmsg_usesize)+=number_characters_read;
-    break;
-  }
-
-  // Receive the HTTP ACK for the home page.
-  while(1)
-  {
-    memset(store_buffer,0x00,store_size);
-    number_characters_read=readline(socket_fd,store_buffer,store_size);
-printf("check point .C.[%d]%s",number_characters_read,store_buffer);
-fflush(stdout);
-    if(number_characters_read<=0)
-    {
-      close(socket_fd);
-      if(number_characters_read==-1)
-      {
-        perror("socket_fd read error");
-        return 1;
-      }
-      break; //end of socket
-    }
-    else if(number_characters_read>1 && number_characters_read<6)
-    {
-printf("check point .n.[%d]%s",parseHexToDecByHtml(store_buffer),store_buffer);
-fflush(stdout);
-    }
-
-    if(((*readmsg_usesize)+number_characters_read)>=(*readmsg_maxsize))
-    {
-      (*readmsg_maxsize)+=store_size;
-      (*readmsg)=realloc((*readmsg),(*readmsg_maxsize));
-      if((*readmsg)==NULL)
-      {
-        perror("conf_file memory alloc error");
-        free((*readmsg));
-        close(socket_fd);
-        return 1;
-      }
-      memset((*readmsg)+(*readmsg_usesize),0x00,store_size);
-    }
-
-    memcpy((*readmsg)+(*readmsg_usesize),store_buffer,number_characters_read);
-    (*readmsg_usesize)+=number_characters_read;
-  }
-  return 0;
 }
 
 int euckrtoutf8(char *instring, char **outstring)
@@ -695,22 +535,277 @@ int euckrtoutf8(char *instring, char **outstring)
   return 0;
 }
 
+int GetDartApi(char **readmsg, int *readmsg_usesize)
+{
+  int socket_fd;
+  ssize_t number_characters_read,number_characters_write;
+  //char *store_buffer, *html_buffer;
+  //int store_size, html_size;
+
+  char *HOSTNAME = "dart.fss.or.kr";
+  int HOSTPORT = 80;
+  
+  char ReqURL[1000];
+  char ReqWrite[1000];
+
+  char *DARTAUTHKEY = "d58011d7473b0d0f7bf602538ed3f17918fed9c9";
+  char *crp_cd = "009540";
+  char *end_dt = "20170515";
+  char *start_dt = "20170515";
+  char *fin_rpt = "";
+  char *dsp_tp = "";
+  char *bsn_tp = "";
+  char *sort = "";
+  char *series = "";
+  char *page_no = "";
+  char *page_set = "";
+
+  sprintf(ReqURL,"/api/search.xml?auth=%s",DARTAUTHKEY);
+  if(strlen(crp_cd)>=0)
+    sprintf(ReqURL,"%s&crp_cd=%s",ReqURL,crp_cd);
+  if(strlen(end_dt)>=0)
+    sprintf(ReqURL,"%s&end_dt=%s",ReqURL,end_dt);
+  if(strlen(start_dt)>=0)
+    sprintf(ReqURL,"%s&start_dt=%s",ReqURL,start_dt);
+  if(strlen(fin_rpt)>=0)
+    sprintf(ReqURL,"%s&fin_rpt=%s",ReqURL,fin_rpt);
+  if(strlen(dsp_tp)>=0)
+    sprintf(ReqURL,"%s&dsp_tp=%s",ReqURL,dsp_tp);
+  if(strlen(bsn_tp)>=0)
+    sprintf(ReqURL,"%s&bsn_tp=%s",ReqURL,bsn_tp);
+  if(strlen(sort)>=0)
+    sprintf(ReqURL,"%s&sort=%s",ReqURL,sort);
+  if(strlen(series)>=0)
+    sprintf(ReqURL,"%s&series=%s",ReqURL,series);
+  if(strlen(page_no)>=0)
+    sprintf(ReqURL,"%s&page_no=%s",ReqURL,page_no);
+  if(strlen(page_set)>=0)
+    sprintf(ReqURL,"%s&page_set=%s",ReqURL,page_set);
+
+  sprintf(ReqWrite,"GET %s HTTP/1.1\r\nHost: dart.fss.or.kr\r\nAccept-Encoding: text/html, deflate\r\nAccept: text/html\r\nAccept-Language: ko-kr\r\n\r",ReqURL);
+
+  if((socket_fd=connect_server(HOSTNAME, HOSTPORT))<=1) return 1;
+
+  // Retrieve the server's home page.
+  // Send the HTTP GET command for the home page.
+  number_characters_write=write(socket_fd, ReqWrite, strlen(ReqWrite));
+  if(number_characters_write<=0)
+  {
+    perror("socket_fd write error");
+    close(socket_fd);
+    return 1;
+  }
+
+  number_characters_read=ParseByHtml(socket_fd, &(*readmsg), readmsg_usesize);
+  close(socket_fd);
+  return number_characters_read;
+}
+
+void parseStory(struct _dart_api **stVal, xmlDocPtr doc, xmlNodePtr cur)
+{
+  xmlChar *key;
+  int size, rtn;
+
+  cur = cur->xmlChildrenNode;
+  (*stVal) = (struct _dart_api *)malloc(sizeof(struct _dart_api));
+  if((*stVal) == NULL)
+  {
+    perror("_dart_result memory alloc error");
+    free(stVal);
+  }
+
+  while(cur != NULL)
+  {
+    if(!xmlStrcmp(cur->name, (const xmlChar *) "crp_cls"))
+    {
+      key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+      size = xmlStrlen(key);
+      //rtn = setvalue((void *)&((*stVal)->crp_cls),(char *)key, size);
+      (*stVal)->crp_cls = malloc(size + 1);
+      memset((*stVal)->crp_cls, 0x00, size + 1);
+      memcpy((*stVal)->crp_cls, key, size);
+      //printf("crp_cls: [%d]%s\n", size, key);
+      xmlFree(key);
+    }
+    else if(!xmlStrcmp(cur->name, (const xmlChar *) "crp_nm"))
+    {
+      key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+      size = xmlStrlen(key);
+      //rtn = setvalue((void *)&((*stVal)->crp_nm),(char *)key, size);
+      (*stVal)->crp_nm = malloc(size + 1);
+      memset((*stVal)->crp_nm, 0x00, size + 1);
+      memcpy((*stVal)->crp_nm, key, size);
+      //printf("crp_nm: [%d]%s\n", size, key);
+      xmlFree(key);
+    }
+    else if(!xmlStrcmp(cur->name, (const xmlChar *) "crp_cd"))
+    {
+      key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+      size = xmlStrlen(key);
+      //rtn = setvalue((void *)&((*stVal)->crp_cd),(char *)key, size);
+      (*stVal)->crp_cd = malloc(size + 1);
+      memset((*stVal)->crp_cd, 0x00, size + 1);
+      memcpy((*stVal)->crp_cd, key, size);
+      //printf("crp_cd: [%d]%s\n", size, key);
+      xmlFree(key);
+    }
+    else if(!xmlStrcmp(cur->name, (const xmlChar *) "rpt_nm"))
+    {
+      key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+      size = xmlStrlen(key);
+      //rtn = setvalue((void *)&((*stVal)->rpt_nm),(char *)key, size);
+      (*stVal)->rpt_nm = malloc(size + 1);
+      memset((*stVal)->rpt_nm, 0x00, size + 1);
+      memcpy((*stVal)->rpt_nm, key, size);
+      //printf("rpt_nm: [%d]%s\n", size,key);
+      xmlFree(key);
+    }
+    else if(!xmlStrcmp(cur->name, (const xmlChar *) "rcp_no"))
+    {
+      key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+      size = xmlStrlen(key);
+      //rtn = setvalue((void *)&((*stVal)->rcp_no),(char *)key, size);
+      (*stVal)->rcp_no = malloc(size + 1);
+      memset((*stVal)->rcp_no, 0x00, size + 1);
+      memcpy((*stVal)->rcp_no, key, size);
+      //printf("rcp_no: [%d]%s\n", size, key);
+      xmlFree(key);
+    }
+    else if(!xmlStrcmp(cur->name, (const xmlChar *) "flr_nm"))
+    {
+      key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+      size = xmlStrlen(key);
+      //rtn = setvalue((void *)&((*stVal)->flr_nm),(char *)key, size);
+      (*stVal)->flr_nm = malloc(size + 1);
+      memset((*stVal)->flr_nm, 0x00, size + 1);
+      memcpy((*stVal)->flr_nm, key, size);
+      //printf("flr_nm: [%d]%s\n", size, key);
+      xmlFree(key);
+    }
+    else if(!xmlStrcmp(cur->name, (const xmlChar *) "rcp_dt"))
+    {
+      key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+      size = xmlStrlen(key);
+      //rtn = setvalue((void *)&((*stVal)->rcp_dt),(char *)key, size);
+      (*stVal)->rcp_dt = malloc(size + 1);
+      memset((*stVal)->rcp_dt, 0x00, size + 1);
+      memcpy((*stVal)->rcp_dt, key, size);
+      //printf("rcp_dt: [%d]%s\n", size, key);
+      xmlFree(key);
+    }
+    else if(!xmlStrcmp(cur->name, (const xmlChar *) "rmk"))
+    {
+      key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+      size = xmlStrlen(key);
+      //rtn = setvalue((void *)&((*stVal)->rmk),(char *)key, size);
+      (*stVal)->rmk = malloc(size + 1);
+      memset((*stVal)->rmk, 0x00, size + 1);
+      memcpy((*stVal)->rmk, key, size);
+      //printf("rmk: [%d]%s\n", size, key);
+      xmlFree(key);
+    }
+    cur = cur->next;
+  }
+  return;
+}
+
+static void parseDoc(struct _list_dart_api **node, char *buffer, int size)
+{
+  xmlDocPtr doc;
+  xmlNodePtr cur;
+  xmlChar *key;
+
+  struct _dart_api *stVal;
+
+  doc = xmlParseMemory(buffer, size);
+  if(doc == NULL)
+  {
+    fprintf(stderr,"Document not parsed successfully. \n");
+    return;
+  }
+
+  cur = xmlDocGetRootElement(doc);
+  if(cur == NULL)
+  {
+    fprintf(stderr,"empty document\n");
+    xmlFreeDoc(doc);
+    return;
+  }
+
+  if(xmlStrcmp(cur->name, (const xmlChar *) "result"))
+  {
+    fprintf(stderr,"document of the wrong type, root node != result");
+    xmlFreeDoc(doc);
+    return;
+  }
+  cur = cur->xmlChildrenNode;
+  if(!xmlStrcmp(cur->name, (const xmlChar *) "err_code"))
+  {
+    key = xmlNodeListGetString(doc, cur->xmlChildrenNode,1);
+    if(strcmp(key,"000")!=0) return;
+  }
+/*
+  err_code
+  err_msg
+  page_set
+  total_count
+  total_page
+*/
+
+  while(cur != NULL)
+  {
+    if((!xmlStrcmp(cur->name, (const xmlChar *) "list")))
+    {
+      parseStory(&stVal, doc, cur);
+      insert_node(node, stVal);
+
+      printf("check point ... parseDoc.1[%s][%s]\n"
+        ,stVal->crp_cls, stVal->crp_nm);
+
+      printf("check point ... parseDoc..\n");
+      printf("check point ... parseDoc.2[%s][%s]\n",
+        (*node)->crp_cls,
+        (*node)->crp_nm
+      );
+
+      free(stVal->crp_cls);
+      free(stVal->crp_nm);
+      free(stVal->crp_cd);
+      free(stVal->rpt_nm);
+      free(stVal->rcp_no);
+      free(stVal->flr_nm);
+      free(stVal->rcp_dt);
+      free(stVal->rmk);
+      free(stVal);
+
+      printf("check point ... parseDoc.3[%s][%s]\n"
+        ,(*node)->crp_cls
+        ,(*node)->crp_nm
+      );
+    }
+    cur = cur->next;
+  }
+  xmlFreeDoc(doc);
+  return;
+}
+
 int main(int argc, char *argv[]) 
 {
-  int socket_fd, fd;
-  struct sockaddr_in name;
-  struct hostent *hostinfo;
-  struct _visit *pvisit, *plist, *pIdxCtl, *is_visited;
-
+  int fd, socket_fd;
   char *store_buffer, *getmsg_buffer;
   char *pMem, *memory_buffer, *pTagStore;
-  char *search_excption, *search_tag, *search_tag_head, *search_tag_tail,
-       *href_head, *href_tail, *href_mid_head, *href_mid_tail;
-  int iMaxMemSize, number_memory_size, number_tag_size, 
-      href_size, href_mid_size, flag_text;
+  int iMaxMemSize, iUseMemSize, number_tag_size;
 
   time_t timer;
   struct tm *tinfo;
+  int ret;
+  char *cfind;
+
+  struct _list_dart_api *node, *stCurDart;
+  char ReqWrite[MAX_BUFFER];
+
+  char *HOSTNAME = "dart.fss.or.kr";
+  int HOSTPORT = 80;
 
   getmsg_buffer=(char *)malloc(MAX_BUFFER);
   if(getmsg_buffer==NULL)
@@ -745,14 +840,16 @@ int main(int argc, char *argv[])
       timer=time(NULL);
       tinfo=localtime(&timer);
       sprintf(getmsg_buffer,
-//        "/dsaf001/main.do?rcpNo=20161129000214");
-        "/dsaf001/main.do?rcpNo=20170227000188");
+        "/api/search.xml?auth=d58011d7473b0d0f7bf602538ed3f17918fed9c9&crp_cd=009540&start_dt=20170515&end_dt=20170515");
+//        "/dsaf001/main.do?rcpNo=20170227000188");
+//        "/dsaf001/main.do?rcpNo=20170515004618");
+//        "/report/viewer.do?rcpNo=20170515004618&dcmNo=5655216&eleId=13&offset=639142&length=161656&dtd=dart3.xsd");
       sprintf(store_buffer,
         "/home/oracle/Project/log/dartpage_%04d%02d%02d.html",
         tinfo->tm_year+1900,tinfo->tm_mon+1,tinfo->tm_mday);
       break;
   }
-  fd=open(store_buffer,O_WRONLY|O_CREAT|O_EXCL,0644);
+  fd=open(store_buffer,O_WRONLY|O_CREAT|O_APPEND,0644);
   if(fd==-1)
   {
     perror("fd_store_file");
@@ -776,513 +873,58 @@ int main(int argc, char *argv[])
   memset(pMem,0x00,1);
 
   iMaxMemSize=1;
-  number_memory_size=0;
+  iUseMemSize=0;
 
-  http_readwrite(MKNEWS_HOST, HTTP_PORT, &pMem, &number_memory_size, &iMaxMemSize, store_buffer, strlen(store_buffer));
-  printf("check point ...%s",pMem);
-  fflush(stdout);
+  iUseMemSize=GetDartApi(&pMem, &iMaxMemSize);
+  printf("\n%s\n",pMem);
 
-  exit(0);
-  number_tag_size=iMaxMemSize;
-  pTagStore=NULL;
-  pTagStore=realloc(pTagStore,number_tag_size);
-  if(pTagStore==NULL)
+  number_tag_size = 0;
+  while(*(pMem+number_tag_size)!='<') number_tag_size += 1;
+
+  init_list(&node);
+  
+
+  parseDoc(&node, pMem+number_tag_size, iUseMemSize-number_tag_size);
+
+/*
+  printf("check point ... node1:[%s][%s]\n", 
+    node->rpt_nm, node->rcp_no);
+  printf("check point ... node2:[%s][%s]\n", 
+    node->next->rpt_nm, node->next->rcp_no);
+  printf("check point ... node3:[%s][%s]\n", 
+    node->next->next->rpt_nm, node->next->next->rcp_no);
+*/
+
+  stCurDart = node->next;
+
+  ret = 1;
+  while(stCurDart != NULL)
   {
-    perror("TagStore memory alloc error");
-    free(pTagStore);
-    return 1;
-  }
+    //printf("check point ... node%d:[%s][%s][%d]\n", 
+    //  ret, stCurDart->rpt_nm, stCurDart->rcp_no, strlen(stCurDart->crp_cd));
+    //ret += 1;
 
-  pvisit=NULL;
-  if((init_list(&pvisit))==FAULT) exit(0);
+    sprintf(ReqWrite,"GET http://dart.fss.or.kr/dsaf001/main.do?rcpNo=%s HTTP/1.1\r\nHost: dart.fss.or.kr\r\nAccept-Encoding: text/html, deflate\r\nAccept: text/html\r\nAccept-Language: ko-kr\r\n\r",
+      stCurDart->rcp_no);
 
-  memory_buffer=pMem;
-  do
-  {
-    search_tag=NULL;
-    search_tag_head=NULL;
-    search_tag_tail=NULL;
+    if((socket_fd=connect_server(HOSTNAME, HOSTPORT))<=1) return 1;
 
-    if((search_tag_head=strstr(memory_buffer,"<a href"))==NULL) break;
-    search_tag=search_tag_head;
-    search_tag_tail=strstr(search_tag,"</a>");
-    search_excption=strstr(search_tag,"</td>");
-
-    if(search_tag_head!=NULL && search_tag_tail!=NULL)
+    // Retrieve the server's home page.
+    // Send the HTTP GET command for the home page.
+    ret=write(socket_fd, ReqWrite, strlen(ReqWrite));
+    if(ret<=0)
     {
-      memory_buffer=search_tag_tail;
-      memset(pTagStore,0x00,number_tag_size);
-
-      if(search_tag_tail<search_excption)
-        strncpy(pTagStore,search_tag_head,search_tag_tail-search_tag_head);
-      else
-      {
-        memory_buffer=search_excption;
-        strncpy(pTagStore,search_tag_head,search_excption-search_tag_head);
-      }
-      //printf("check point ... 01\n\n%s\n",pTagStore);
-
-      href_head=pTagStore+9;
-      href_tail=strstr(href_head,"'");
-      href_size=href_tail-href_head;
-      memset(store_buffer,0x00,MAX_BUFFER);
-      strncpy(store_buffer,href_head,href_size);
-      //printf("check point ... 02\n\n%s\n",store_buffer);
-
-      insert_node(&pvisit, store_buffer, href_size);
-    }
-
-    memory_buffer++;
-  } while(*memory_buffer) ;
-
-  //printf("check point ... 03\n\n");
-  //print_list(pvisit);
-
-  is_visited=pvisit->next;
-  while(1)
-  {
-    if(is_visited->next != NULL)
-    {
-      plist=is_visited->next;
-      is_visited=is_visited->next;
-    }
-    else break;
-
-    memset(store_buffer,0x00,MAX_BUFFER);
-    memset(getmsg_buffer,0x00,MAX_BUFFER);
-    if((strstr(plist->hypertext,"?page="))!=NULL)
-    {
-      // ?page=1&PY=2016&SEC=01&SD=20161213&PD=P1
-      sprintf(getmsg_buffer,"/include/paper_list.php%s",plist->hypertext);
-      sprintf(store_buffer,MKNEWS_GET,getmsg_buffer);
-      plist->is_visit=TRUE;
-      //printf("check point .... page\n\n[%s]\n",plist->hypertext);
-    }
-    else if((strstr(plist->hypertext,"http://"))!=NULL)
-    {
-      plist->is_visit=TRUE;
-      continue;
-    }
-    else if((strstr(plist->hypertext,"/include/paper_list.php"))!=NULL)
-    {
-      // /include/paper_list.php?PY=2016&SEC=01&SD=20161213&PD=P4
-      sprintf(store_buffer,MKNEWS_GET,plist->hypertext);
-      plist->is_visit=TRUE;
-      //printf("check point .... include\n\n[%s]\n",plist->hypertext);
+      perror("socket_fd write error");
+      close(socket_fd);
+      return 1;
     }
 
     memset(pMem,0x00,iMaxMemSize);
-    number_memory_size=0;
+    iUseMemSize=ParseByHtml(socket_fd, &pMem, &iMaxMemSize);
 
-    //printf("check point ... Visit\n\n%s\n\n",store_buffer);
-    http_readwrite(MKNEWS_HOST, HTTP_PORT, &pMem, &number_memory_size, &iMaxMemSize, store_buffer, strlen(store_buffer));
+    printf("check point ...\n\n\n%s\n\n", pMem);
+    close(socket_fd);
 
-    if(iMaxMemSize>number_tag_size)
-    {
-      number_tag_size=iMaxMemSize;
-      pTagStore=realloc(pTagStore,number_tag_size);
-      if(pTagStore==NULL)
-      { 
-        perror("TagStore memory alloc error");
-        free(pTagStore);
-        return 1;
-      }
-    }
-
-    memory_buffer=pMem;
-    do
-    { 
-      search_tag=NULL;
-      search_tag_head=NULL;
-      search_tag_tail=NULL;
-    
-      if((search_tag_head=strstr(memory_buffer,"<a href"))==NULL) break;
-      search_tag=search_tag_head;
-      search_tag_tail=strstr(search_tag,"</a>");
-      search_excption=strstr(search_tag,"</td>");
-    
-      if(search_tag_head!=NULL && search_tag_tail!=NULL)
-      { 
-        memory_buffer=search_tag_tail;
-        memset(pTagStore,0x00,number_tag_size);
-
-        if(search_tag_tail<search_excption)
-          strncpy(pTagStore,search_tag_head,search_tag_tail-search_tag_head);
-        else
-        { 
-          memory_buffer=search_excption;
-          strncpy(pTagStore,search_tag_head,search_excption-search_tag_head);
-        }
-        //printf("check point ... 04\n\n%s\n",pTagStore);
-      
-        href_head=pTagStore+9;
-        href_tail=strstr(href_head,"'");
-        href_size=href_tail-href_head;
-        memset(store_buffer,0x00,MAX_BUFFER);
-        strncpy(store_buffer,href_head,href_size);
-        //printf("check point ... 05\n\n%s\n",store_buffer);
-
-        insert_node(&pvisit, store_buffer, href_size);
-      }
-    
-      memory_buffer++;
-    } while(*memory_buffer) ;
+    stCurDart = stCurDart->next;
   }
-
-  //printf("check point ... 06\n\n");
-  //print_list(pvisit);
-  pIdxCtl=pvisit->next;
-
-  memset(store_buffer,0x00,MAX_BUFFER);
-  switch(argc)
-  {
-    case 3:
-      sprintf(store_buffer,"/home/pi/Project/log/mknewspaper_%s.html",argv[2]);
-      break;
-    default:
-      sprintf(store_buffer,
-        "/home/pi/Project/log/mknewspaper_%04d%02d%02d.html",
-        tinfo->tm_year+1900,tinfo->tm_mon+1,tinfo->tm_mday);
-      break;
-  }
-
-  while(pIdxCtl->next)
-  {
-    plist=pIdxCtl;
-    if((strstr(plist->hypertext,"http://"))!=NULL)
-    {
-      // 01234567890123456789012345
-      // http://dbplus.mk.co.kr/index.php?MM=V
-      memset(store_buffer,0x00,MAX_BUFFER);
-      sprintf(store_buffer,MKNEWS_GET,(plist->hypertext)+22);
-    }
-    else
-    {
-      pIdxCtl=pIdxCtl->next;
-      continue;
-    }
-
-    memset(pMem,0x00,iMaxMemSize);
-    number_memory_size=0;
-    //printf("check point ... Visit\n\n%s\n\n",store_buffer);
-
-    http_readwrite(MKNEWS_HOST, HTTP_PORT, &pMem, &number_memory_size, &iMaxMemSize, store_buffer, strlen(store_buffer));
-
-    write(fd,pMem,number_memory_size);
-    DeleteChar(pMem,9);
-    DeleteChar(pMem,10);
-    DeleteChar(pMem,13);
-
-    if((iMaxMemSize*4)>number_tag_size)
-    { 
-      number_tag_size=(iMaxMemSize*4);
-      pTagStore=realloc(pTagStore,number_tag_size);
-      if(pTagStore==NULL)
-      { 
-        perror("TagStore memory alloc error");
-        free(pTagStore);
-        return 1;
-      }
-    }
-    memset(pTagStore,0x00,number_tag_size);
-
-    euckrtoutf8(pMem, &pTagStore);
-    //printf("check point ... 01[%d]\n\n%s\n",rtn, pTagStore);
-
-    search_tag=NULL;
-    search_tag_head=NULL;
-
-    // NewsPaper Parsing: Title Main
-    if((search_tag_head=strstr(pTagStore,"'head_tit'>"))!=NULL)
-    {
-      search_tag=search_tag_head;
-
-      href_head=NULL;
-      href_tail=NULL;
-      href_size=0;
-
-      // 012345678901234567890123
-      // 'head_tit'>
-      href_head=search_tag+11;
-      href_tail=strstr(href_head,"</span>");
-      href_size=href_tail-href_head;
-      memset(pMem,0x00,iMaxMemSize);
-      strncpy(pMem,href_head,href_size);
-      //printf("check point ... 02\n\n[%s]\n",pMem);
-      DeleteString(pMem,"<br>");
-      printf("\n%s%c",pMem,13);
-
-      // 01234567
-      // </span>
-      search_tag=href_tail+7;
-      search_tag_head=NULL;
-
-      // NewsPaper Parsing: Title Subs
-      if((search_tag_head=strstr(search_tag,"'sub_tit'>"))!=NULL)
-      {
-        search_tag=search_tag_head;
-
-        href_head=NULL;
-        href_tail=NULL;
-        href_size=0;
-
-        // 01234567890123456789012
-        // 'sub_tit'>
-        href_head=search_tag+10;
-        href_tail=strstr(href_head,"</span>");
-        href_size=href_tail-href_head;
-        memset(pMem,0x00,iMaxMemSize);
-        strncpy(pMem,href_head,href_size);
-        //printf("check point ... 02\n\n\t[%s]\n",pMem);
-        DeleteString(pMem,"<br>");
-        printf("%s%c",pMem,13);
-      }
-      else printf("%c",13);
-
-      // 01234567
-      // </span>
-      search_tag=href_tail+7;
-      search_tag_head=NULL;
-
-      // NewsPaper Parsing: News Writing Time 1st.
-      if((search_tag_head=strstr(search_tag,"'sm_tit'>"))!=NULL)
-      {
-        search_tag=search_tag_head;
-
-        href_head=NULL;
-        href_tail=NULL;
-        href_size=0;
-
-        // 01234567890123456789012
-        // 'sm_tit'>
-        href_head=search_tag+9;
-        href_tail=strstr(href_head,"</span>");
-        href_size=href_tail-href_head;
-        memset(pMem,0x00,iMaxMemSize);
-        strncpy(pMem,href_head,href_size);
-        //printf("check point ... 02\n\n\t[%s]\n",pMem);
-        DeleteString(pMem,"<br>");
-        printf("%s%c",pMem,13);
-      }
-      else printf("%c",13);
-
-      // 01234567
-      // </span>
-      search_tag=href_tail+7;
-      search_tag_head=NULL;
-
-      // NewsPaper Parsing: News Writing Time 2st.
-      if((search_tag_head=strstr(search_tag,"'sm_num'>"))!=NULL)
-      {
-        search_tag=search_tag_head;
-
-        href_head=NULL;
-        href_tail=NULL;
-        href_size=0;
-
-        // 01234567890123456789012
-        // 'sm_num'>
-        href_head=search_tag+9;
-        href_tail=strstr(href_head,"</span>");
-        href_size=href_tail-href_head;
-        memset(pMem,0x00,iMaxMemSize);
-        strncpy(pMem,href_head,href_size);
-        //printf("check point ... 02\n\n\t[%s]\n",pMem);
-        DeleteString(pMem,"<br>");
-        printf("%s%c",pMem,13);
-      }
-      else printf("%c",13);
-
-      // 01234567
-      // </span>
-      search_tag=href_tail+7;
-      search_tag_head=NULL;
-
-      // NewsPaper Parsing: News Writing Time 3st.
-      if((search_tag_head=strstr(search_tag,"'sm_tit'>"))!=NULL)
-      {
-        search_tag=search_tag_head;
-
-        href_head=NULL;
-        href_tail=NULL;
-        href_size=0;
-
-        // 01234567890123456789012
-        // 'sm_tit'>
-        href_head=search_tag+9;
-        href_tail=strstr(href_head,"</span>");
-        href_size=href_tail-href_head;
-        memset(pMem,0x00,iMaxMemSize);
-        strncpy(pMem,href_head,href_size);
-        //printf("check point ... 02\n\n\t[%s]\n",pMem);
-        DeleteString(pMem,"<br>");
-        printf("%s%c",pMem,13);
-      }
-      else printf("%c",13);
-
-      // 01234567
-      // </span>
-      search_tag=href_tail+7;
-      search_tag_head=NULL;
-
-      // NewsPaper Parsing: News Writing Time 4st.
-      if((search_tag_head=strstr(search_tag,"'sm_num'>"))!=NULL)
-      {
-        search_tag=search_tag_head;
-
-        href_head=NULL;
-        href_tail=NULL;
-        href_size=0;
-
-        // 01234567890123456789012
-        // 'sm_num'>
-        href_head=search_tag+9;
-        href_tail=strstr(href_head,"</span>");
-        href_size=href_tail-href_head;
-        memset(pMem,0x00,iMaxMemSize);
-        strncpy(pMem,href_head,href_size);
-        //printf("check point ... 02\n\n\t[%s]\n",pMem);
-        DeleteString(pMem,"<br>");
-        printf("%s%c",pMem,13);
-      }
-      else printf("%c",13);
-
-      // 01234567
-      // </span>
-      search_tag=href_tail+7;
-      search_tag_head=NULL;
-
-      // NewsPaper Parsing: Main Text 1st.
-      if((search_tag_head=strstr(search_tag,"'read_txt'>"))!=NULL)
-      {
-        href_head=NULL;
-        href_tail=NULL;
-        href_mid_head=NULL;
-        href_mid_tail=NULL;
-        href_size=0;
-        href_mid_size=0;
-
-        // 01234567890123456789012
-        // 'read_txt'>
-        search_tag=search_tag_head+11;
-        href_head=search_tag;
-        flag_text=1;
-
-        while(flag_text)
-        {
-          search_tag_head=strstr(search_tag,"<div ");
-          search_tag_tail=strstr(search_tag,"</div>");
-
-          if(search_tag_head<search_tag_tail)
-          {
-            if(flag_text==1) href_mid_tail=search_tag_head;
-            //  012345
-            // '<div '
-            search_tag=search_tag_head+5;
-            flag_text+=1;
-          }
-          else if(search_tag_head>search_tag_tail)
-          {
-            //  0123456
-            // '</div>'
-            search_tag=search_tag_tail+6;
-            flag_text-=1;
-            if(flag_text==1) href_mid_head=search_tag_tail+6;
-          }
-        }
-        //  0123456
-        // '</div>'
-        href_tail=search_tag-6;
-        memset(pMem,0x00,iMaxMemSize);
-        if(href_mid_head!=NULL && href_mid_tail!=NULL)
-        {
-          href_mid_size=href_mid_tail-href_head;
-          strncpy(pMem,href_head,href_mid_size);
-
-          href_size=href_tail-href_mid_head;
-          strncpy(pMem+href_mid_size,href_mid_head,href_size);
-        }
-        else
-        {
-          href_size=href_tail-href_head;
-          strncpy(pMem,href_head,href_size);
-        }
-        //printf("check point ... 02\n\n\t[%s][%d]\n",pMem, href_size);
-        DeleteString(pMem,"<br>");
-        printf("%s%c",pMem,13);
-
-
-        // 01234567
-        // </div>
-        search_tag=href_tail+6;
-        search_tag_head=NULL;
-
-        // NewsPaper Parsing: Main Text 2st.
-        if((search_tag_head=strstr(search_tag,"'read_txt'>"))!=NULL)
-        {
-          href_head=NULL;
-          href_tail=NULL;
-          href_mid_head=NULL;
-          href_mid_tail=NULL;
-          href_size=0;
-          href_mid_size=0;
-
-          // 01234567890123456789012
-          // 'read_txt'>
-          search_tag=search_tag_head+11;
-          href_head=search_tag;
-          flag_text=1;
-
-          while(flag_text)
-          {
-            search_tag_head=strstr(search_tag,"<div ");
-            search_tag_tail=strstr(search_tag,"</div>");
-
-            if(search_tag_head<search_tag_tail)
-            {
-              if(flag_text==1) href_mid_tail=search_tag_head;
-              //  012345
-              // '<div '
-              search_tag=search_tag_head+5;
-              flag_text+=1;
-            }
-            else if(search_tag_head>search_tag_tail)
-            {
-              //  0123456
-              // '</div>'
-              search_tag=search_tag_tail+6;
-              flag_text-=1;
-              if(flag_text==1) href_mid_head=search_tag_tail+6;
-            }
-          }
-          //  0123456
-          // '</div>'
-          href_tail=search_tag-6;
-          memset(pMem,0x00,iMaxMemSize);
-          if(href_mid_head!=NULL && href_mid_tail!=NULL)
-          {
-            href_mid_size=href_mid_tail-href_head;
-            strncpy(pMem,href_head,href_mid_size);
-
-            href_size=href_tail-href_mid_head;
-            strncpy(pMem+href_mid_size,href_mid_head,href_size);
-          }
-          else
-          {
-            href_size=href_tail-href_head;
-            strncpy(pMem,href_head,href_size);
-          }
-          //printf("check point ... 02\n\n\t[%s][%d]\n",pMem, href_size);
-          DeleteString(pMem,"<br>");
-          printf("%s%c",pMem,13);
-        }
-        else printf("%c",13);
-      }
-    }
-    pIdxCtl=pIdxCtl->next;
-  }
-  free(pMem);
-  free(pTagStore);
-  free(store_buffer);
-  delete_all_list(pvisit);
 }
