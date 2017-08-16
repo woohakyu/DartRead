@@ -1,2 +1,4 @@
-echo "Hello World"
-echo "Hello CentOS"
+git add dartpage.c
+git commit -m "Add viewDoc"
+git push
+Insert ID/PW
