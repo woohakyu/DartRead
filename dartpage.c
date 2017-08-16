@@ -806,6 +806,8 @@ int main(int argc, char *argv[])
 
   char *HOSTNAME = "dart.fss.or.kr";
   int HOSTPORT = 80;
+  char *chkPoint, *chkPoint1;
+  char rcpno[64], dcmno[64], eleId[64], offset[64], length[64], dtd[64], Addr[1024];
 
   getmsg_buffer=(char *)malloc(MAX_BUFFER);
   if(getmsg_buffer==NULL)
@@ -922,7 +924,63 @@ int main(int argc, char *argv[])
     memset(pMem,0x00,iMaxMemSize);
     iUseMemSize=ParseByHtml(socket_fd, &pMem, &iMaxMemSize);
 
-    printf("check point ...\n\n\n%s\n\n", pMem);
+    chkPoint = NULL;
+    chkPoint = strstr(pMem, " 연결재무제표");
+
+    if(chkPoint == NULL ) {stCurDart = stCurDart->next;continue;}
+    chkPoint = strstr(chkPoint, "viewDoc");
+
+    chkPoint = strstr(chkPoint, "'");
+    chkPoint1 = strstr(chkPoint+1, "'");
+    memset(rcpno, 0x00, 64);
+    memcpy(rcpno, chkPoint+1, chkPoint1-chkPoint-1);
+
+    chkPoint = strstr(chkPoint1+1, "'");
+    chkPoint1 = strstr(chkPoint+1, "'");
+    memset(dcmno, 0x00, 64);
+    memcpy(dcmno, chkPoint+1, chkPoint1-chkPoint-1);
+
+    chkPoint = strstr(chkPoint1+1, "'");
+    chkPoint1 = strstr(chkPoint+1, "'");
+    memset(eleId, 0x00, 64);
+    memcpy(eleId, chkPoint+1, chkPoint1-chkPoint-1);
+
+    chkPoint = strstr(chkPoint1+1, "'");
+    chkPoint1 = strstr(chkPoint+1, "'");
+    memset(offset, 0x00, 64);
+    memcpy(offset, chkPoint+1, chkPoint1-chkPoint-1);
+
+    chkPoint = strstr(chkPoint1+1, "'");
+    chkPoint1 = strstr(chkPoint+1, "'");
+    memset(length, 0x00, 64);
+    memcpy(length, chkPoint+1, chkPoint1-chkPoint-1);
+
+    chkPoint = strstr(chkPoint1+1, "'");
+    chkPoint1 = strstr(chkPoint+1, "'");
+    memset(dtd, 0x00, 64);
+    memcpy(dtd, chkPoint+1, chkPoint1-chkPoint-1);
+    //char rcpno[64], dcmno[64], eleId[64], offset[64], length[64], dtd[64];
+    //viewDoc('20170515004618', '5655216', '13', '639142', '161656', 'dart3.xsd');}
+    printf("check point ...\n\n%s\n\n", rcpno ); 
+    printf("check point ...\n\n%s\n\n", dcmno ); 
+    printf("check point ...\n\n%s\n\n", eleId ); 
+    printf("check point ...\n\n%s\n\n", offset ); 
+    printf("check point ...\n\n%s\n\n", length ); 
+    printf("check point ...\n\n%s\n\n", dtd ); 
+
+    memset(Addr, 0x00, 1024);
+    sprintf(Addr,"/report/viewer.do");
+    sprintf(Addr,"%s?rcpNo=%s",Addr, rcpno);
+    sprintf(Addr,"%s&dcmNo=%s",Addr, dcmno);
+    if(eleId != NULL)
+      sprintf(Addr,"%s&eleId=%s",Addr, eleId);
+    if(offset != NULL)
+      sprintf(Addr,"%s&offset=%s",Addr, offset);
+    if(length != NULL)
+      sprintf(Addr,"%s&length=%s",Addr, length);
+    sprintf(Addr,"%s&dtd=%s",Addr, dtd);
+
+    printf("check point ...\n\n%s\n\n", Addr ); 
     close(socket_fd);
 
     stCurDart = stCurDart->next;
